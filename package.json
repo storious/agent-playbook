@@ -1,6 +1,6 @@
 {
   "name": "agulater",
-  "version": "0.2.1-rc.1",
+  "version": "0.2.1-rc.2",
   "description": "Prepare .agents packages and manage Agul and its extensions.",
   "license": "Apache-2.0",
   "repository": {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.1-rc.2 — command help polish
+
+- Made `--help` and `-h` work consistently after top-level and nested
+  commands, including `runtime install`, `catalog add`, `add`, and `prepare`.
+- Kept unknown options strict outside explicit help requests.
+
 ## 0.2.1-rc.1 — first experience release
 
 - Added standalone Windows, Linux, and macOS release artifacts plus one-line

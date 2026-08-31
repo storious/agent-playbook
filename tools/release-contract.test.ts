@@ -61,8 +61,8 @@ describe("standalone release contract", () => {
     expect(install).toBeGreaterThan(0);
     expect(source).toBeGreaterThan(install);
     expect(readme.slice(install, source)).toContain("do not need Bun, Node.js, or npm");
-    expect(readme.slice(install, source)).toContain("v0.2.1-rc.1/install.sh");
-    expect(readme.slice(install, source)).toContain("v0.2.1-rc.1/install.ps1");
+    expect(readme.slice(install, source)).toContain("v0.2.1-rc.2/install.sh");
+    expect(readme.slice(install, source)).toContain("v0.2.1-rc.2/install.ps1");
     expect(readme.slice(install, source)).not.toContain("bun add");
   });
 });

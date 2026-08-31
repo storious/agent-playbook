@@ -82,8 +82,12 @@ type Parsed = {
 };
 
 export async function run(args: string[]): Promise<void> {
-  if (args.length === 0 || args[0] === "--help" || args[0] === "-h") {
+  if (args.length === 0) {
     console.log(help);
+    return;
+  }
+  if (args.some((argument) => argument === "--help" || argument === "-h")) {
+    console.log(args[0] === "catalog" ? catalogHelp : args[0] === "runtime" ? runtimeHelp : help);
     return;
   }
   if (args[0] === "--version" || args[0] === "-V") {

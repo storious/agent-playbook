@@ -1256,6 +1256,20 @@ describe("Agulater v2 product flow", () => {
     expect(cli("catalog").stdout.toString()).toContain("catalog search [query]");
     expect(cli("runtime", "--help").stdout.toString()).toContain("runtime install");
     expect(cli("runtime").stdout.toString()).toContain("runtime status");
+    for (const [command, expected] of [
+      [["runtime", "install", "--help"], "runtime install"],
+      [["catalog", "add", "--help"], "catalog add <id> <url-or-path>"],
+      [["add", "--help"], "agulater add <source>"],
+      [["prepare", "-h"], "agulater prepare"],
+    ] as const) {
+      const result = cli(...command);
+      expect(result.exitCode).toBe(0);
+      expect(result.stderr.toString()).toBe("");
+      expect(result.stdout.toString()).toContain(expected);
+    }
+    const unknown = cli("prepare", "--unknown");
+    expect(unknown.exitCode).not.toBe(0);
+    expect(unknown.stderr.toString()).toContain("unknown option: --unknown");
     const metadata = readJson(join(import.meta.dir, "..", "package.json")) as any;
     expect(metadata.scripts.postinstall).toBe("bun tools/agulater.ts setup user --if-missing");
   });

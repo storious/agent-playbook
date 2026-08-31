@@ -19,19 +19,19 @@ for development and release builds.
 
 ## Install the first experience release
 
-`0.2.1-rc.1` is a prerelease, so use its pinned installer rather than GitHub's
+`0.2.1-rc.2` is a prerelease, so use its pinned installer rather than GitHub's
 stable-only `latest` alias.
 
 Linux or macOS:
 
 ```console
-curl -fsSL https://github.com/storious/agulater/releases/download/v0.2.1-rc.1/install.sh | sh
+curl -fsSL https://github.com/storious/agulater/releases/download/v0.2.1-rc.2/install.sh | sh
 ```
 
 Windows PowerShell:
 
 ```powershell
-irm https://github.com/storious/agulater/releases/download/v0.2.1-rc.1/install.ps1 | iex
+irm https://github.com/storious/agulater/releases/download/v0.2.1-rc.2/install.ps1 | iex
 ```
 
 These recommended install commands do not need Bun, Node.js, or npm.
