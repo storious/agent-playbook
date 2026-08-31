@@ -1,0 +1,98 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agulater:pools:v2",
+  "title": "Agulater Pools v2",
+  "type": "object",
+  "required": ["format", "pools"],
+  "properties": {
+    "format": { "const": "agulater/pools/v2" },
+    "default_pool": { "$ref": "#/$defs/id" },
+    "pools": {
+      "type": "array",
+      "items": {
+        "oneOf": [
+          { "$ref": "#/$defs/native_pool" },
+          { "$ref": "#/$defs/codex_pool" }
+        ]
+      }
+    }
+  },
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": { "properties": { "pools": { "minItems": 1 } }, "required": ["pools"] },
+      "then": { "required": ["default_pool"] }
+    }
+  ],
+  "$defs": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?(?:/[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?)*$"
+    },
+    "strings": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "positive": { "type": "integer", "minimum": 1 },
+    "native_pool": {
+      "type": "object",
+      "required": [
+        "id",
+        "engine",
+        "provider",
+        "endpoint",
+        "model",
+        "context_window",
+        "capabilities",
+        "max_concurrency",
+        "request_timeout_seconds"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "engine": { "const": "native" },
+        "description": { "type": "string", "minLength": 1 },
+        "labels": { "$ref": "#/$defs/strings" },
+        "provider": { "type": "string", "minLength": 1 },
+        "endpoint": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "api_key_env": {
+          "type": "string",
+          "pattern": "^[A-Za-z_][A-Za-z0-9_]*$"
+        },
+        "reasoning_effort": { "type": "string", "minLength": 1 },
+        "context_window": { "$ref": "#/$defs/positive" },
+        "capabilities": { "$ref": "#/$defs/strings" },
+        "max_concurrency": { "$ref": "#/$defs/positive" },
+        "request_timeout_seconds": { "$ref": "#/$defs/positive" },
+        "override": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    },
+    "codex_pool": {
+      "type": "object",
+      "required": [
+        "id",
+        "engine",
+        "capabilities",
+        "max_concurrency",
+        "request_timeout_seconds"
+      ],
+      "properties": {
+        "id": { "$ref": "#/$defs/id" },
+        "engine": { "const": "codex" },
+        "description": { "type": "string", "minLength": 1 },
+        "labels": { "$ref": "#/$defs/strings" },
+        "model": { "type": "string", "minLength": 1 },
+        "codex_command": { "type": "string", "minLength": 1 },
+        "reasoning_effort": { "type": "string", "minLength": 1 },
+        "context_window": { "$ref": "#/$defs/positive" },
+        "capabilities": { "$ref": "#/$defs/strings" },
+        "max_concurrency": { "$ref": "#/$defs/positive" },
+        "request_timeout_seconds": { "$ref": "#/$defs/positive" },
+        "override": { "type": "boolean" }
+      },
+      "additionalProperties": false
+    }
+  }
+}

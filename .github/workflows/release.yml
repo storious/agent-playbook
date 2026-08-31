@@ -1,0 +1,214 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+  id-token: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Verify release identity
+        shell: bash
+        run: |
+          git fetch --no-tags origin main:refs/remotes/origin/main
+          git merge-base --is-ancestor "${GITHUB_SHA}" refs/remotes/origin/main
+          version="$(bun -p "require('./package.json').version")"
+          test "${GITHUB_REF_NAME}" = "v${version}"
+          echo "version=${version}" >> "${GITHUB_ENV}"
+
+      - name: Install and test
+        run: |
+          bun install --frozen-lockfile --ignore-scripts
+          bun run check:schema
+          bun test
+          bun tools/agulater.ts --help
+
+      - name: Inspect package
+        run: bun pm pack --dry-run --ignore-scripts
+
+      - name: Pack npm compatibility package
+        shell: bash
+        run: |
+          mkdir -p dist
+          bun pm pack --destination dist --ignore-scripts
+          tarball="dist/agulater-${version}.tgz"
+          test -f "${tarball}"
+          echo "tarball=${tarball}" >> "${GITHUB_ENV}"
+
+      - name: Smoke npm compatibility package
+        shell: bash
+        run: |
+          smoke_root="${RUNNER_TEMP}/agulater-package-smoke"
+          mkdir -p "${smoke_root}/home"
+          export HOME="${smoke_root}/home"
+          export BUN_INSTALL_GLOBAL_DIR="${smoke_root}/global"
+          export BUN_INSTALL_BIN="${smoke_root}/bin"
+          bun add --global --trust "${tarball}"
+          launcher="${BUN_INSTALL_BIN}/agulater"
+          test -x "${launcher}"
+          test "$("${launcher}" --version)" = "agulater ${version}"
+          test -f "${HOME}/.agents/package.json"
+          "${launcher}" catalog list --json >/dev/null
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-npm
+          path: dist/*.tgz
+
+  standalone:
+    needs: verify
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-24.04
+            platform: linux-x64
+            executable: build/agulater
+          - runner: windows-2025
+            platform: windows-x64
+            executable: build/agulater.exe
+          - runner: macos-15-intel
+            platform: macos-x64
+            executable: build/agulater
+          - runner: macos-15
+            platform: macos-arm64
+            executable: build/agulater
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+
+      - name: Install build dependencies
+        run: bun install --frozen-lockfile --ignore-scripts
+
+      - name: Build standalone executable
+        run: >-
+          bun build --compile
+          --no-compile-autoload-dotenv
+          --no-compile-autoload-bunfig
+          --outfile build/agulater
+          tools/agulater.ts
+
+      - name: Smoke standalone executable
+        run: bun tools/smoke-standalone.ts "${{ matrix.executable }}"
+
+      - name: Package Unix executable
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          bundle="agulater-v${version}-${{ matrix.platform }}"
+          mkdir -p "dist/${bundle}"
+          cp "${{ matrix.executable }}" "dist/${bundle}/agulater"
+          cp LICENSE THIRD_PARTY_NOTICES "dist/${bundle}/"
+          chmod +x "dist/${bundle}/agulater"
+          tar -czf "dist/${bundle}.tar.gz" -C dist "${bundle}"
+          rm -rf "dist/${bundle}"
+
+      - name: Package Windows executable
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart("v")
+          $bundle = "agulater-v$version-${{ matrix.platform }}"
+          New-Item -ItemType Directory -Path "dist/$bundle" | Out-Null
+          Copy-Item -LiteralPath "${{ matrix.executable }}" -Destination "dist/$bundle/agulater.exe"
+          Copy-Item -LiteralPath "LICENSE" -Destination "dist/$bundle/LICENSE"
+          Copy-Item -LiteralPath "THIRD_PARTY_NOTICES" -Destination "dist/$bundle/THIRD_PARTY_NOTICES"
+          Compress-Archive -LiteralPath "dist/$bundle" -DestinationPath "dist/$bundle.zip"
+          Remove-Item -LiteralPath "dist/$bundle" -Recurse -Force
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: release-${{ matrix.platform }}
+          path: dist/*
+
+  publish-github:
+    needs: [verify, standalone]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+
+      - name: Add standalone installers
+        shell: bash
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          sed "s/{{VERSION}}/${version}/g" scripts/install.sh > dist/install.sh
+          sed "s/{{VERSION}}/${version}/g" scripts/install.ps1 > dist/install.ps1
+
+      - name: Publish GitHub Release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          flags=()
+          case "${GITHUB_REF_NAME}" in *-*) flags+=(--prerelease) ;; esac
+          gh release create "${GITHUB_REF_NAME}" dist/* \
+            --title "Agulater ${GITHUB_REF_NAME#v}" \
+            --generate-notes \
+            "${flags[@]}"
+
+  publish-npm:
+    needs: publish-github
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - name: Skip npm compatibility publish without credentials
+        if: env.NPM_TOKEN == ''
+        run: echo "NPM_TOKEN is not configured; standalone artifacts and the GitHub Release are complete."
+
+      - if: env.NPM_TOKEN != ''
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+          package-manager-cache: false
+
+      - if: env.NPM_TOKEN != ''
+        uses: actions/download-artifact@v8
+        with:
+          name: release-npm
+          path: dist
+
+      - name: Publish optional npm compatibility package
+        if: env.NPM_TOKEN != ''
+        shell: bash
+        env:
+          NODE_AUTH_TOKEN: ${{ env.NPM_TOKEN }}
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          tarball="dist/agulater-${version}.tgz"
+          test -f "${tarball}"
+          case "${version}" in
+            *-*) dist_tag=next ;;
+            *) dist_tag=latest ;;
+          esac
+          npm publish "${tarball}" --access public --tag "${dist_tag}" --provenance

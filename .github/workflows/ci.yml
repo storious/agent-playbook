@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [dev, main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.0
+      - run: bun install --frozen-lockfile --ignore-scripts
+      - run: bun run check:schema
+      - run: bun test
+      - run: bun tools/agulater.ts --help
+      - name: Build standalone executable
+        run: bun run build:standalone
+      - name: Smoke standalone executable
+        run: bun run smoke:standalone
+      - name: Smoke standalone shell install
+        shell: bash
+        run: |
+          version="$(bun -p "require('./package.json').version")"
+          bundle="agulater-v${version}-linux-x64"
+          fixture="${RUNNER_TEMP}/agulater-install-fixture"
+          mkdir -p "${fixture}/${bundle}" "${fixture}/fake-bin"
+          cp dist/agulater "${fixture}/${bundle}/agulater"
+          cp LICENSE THIRD_PARTY_NOTICES "${fixture}/${bundle}/"
+          tar -czf "${fixture}/${bundle}.tar.gz" -C "${fixture}" "${bundle}"
+          tar -tzf "${fixture}/${bundle}.tar.gz" | grep -Fx "${bundle}/LICENSE"
+          tar -tzf "${fixture}/${bundle}.tar.gz" | grep -Fx "${bundle}/THIRD_PARTY_NOTICES"
+          printf '#!/bin/sh\nif [ "$1 $2" = "auth status" ]; then exit 0; fi\nfor arg in "$@"; do destination="$arg"; done\ncp "$AGULATER_TEST_ARCHIVE" "$destination/"\n' > "${fixture}/fake-bin/gh"
+          chmod +x "${fixture}/fake-bin/gh"
+          sed "s/{{VERSION}}/${version}/g" scripts/install.sh > "${fixture}/install.sh"
+          AGULATER_TEST_ARCHIVE="${fixture}/${bundle}.tar.gz" \
+          AGULATER_INSTALL_DIR="${fixture}/bin" \
+          AGULATER_HOME="${fixture}/home" \
+          PATH="${fixture}/fake-bin:${PATH}" \
+            sh "${fixture}/install.sh"
+          test "$("${fixture}/bin/agulater" --version)" = "agulater ${version}"
+          test -f "${fixture}/home/.agents/package.json"
+      - name: Check installers
+        shell: bash
+        run: |
+          sh -n scripts/install.sh
+          version="$(bun -p "require('./package.json').version")"
+          rendered="$(mktemp)"
+          trap 'rm -f "$rendered"' EXIT
+          sed "s/{{VERSION}}/${version}/g" scripts/install.sh > "$rendered"
+          shell_output="$(sh "$rendered" --dry-run)"
+          printf '%s\n' "$shell_output" | grep -F "agulater-v${version}-linux-x64.tar.gz"
+          printf '%s\n' "$shell_output" | grep -F "agulater setup user --if-missing"
+          powershell_output="$(
+            pwsh -NoProfile -File scripts/install.ps1 \
+              -Version "$version" \
+              -InstallDir "${RUNNER_TEMP}/agulater-bin" \
+              -DryRun
+          )"
+          printf '%s\n' "$powershell_output" | grep -F "agulater-v${version}-windows-x64.zip"
+          printf '%s\n' "$powershell_output" | grep -F "agulater setup user --if-missing"
+      - run: bun pm pack --dry-run --ignore-scripts

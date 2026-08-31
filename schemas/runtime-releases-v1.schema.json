@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agulater:runtime-releases:v1",
+  "title": "Agulater runtime release index v1",
+  "type": "object",
+  "required": ["format", "releases"],
+  "properties": {
+    "format": { "const": "agulater/runtime-releases/v1" },
+    "releases": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["version", "channel", "assets"],
+        "properties": {
+          "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[0-9A-Za-z.-]+)?$" },
+          "channel": { "enum": ["stable", "next"] },
+          "assets": {
+            "type": "object",
+            "minProperties": 1,
+            "propertyNames": { "enum": ["windows-x64", "linux-x64", "macos-x64", "macos-arm64"] },
+            "additionalProperties": {
+              "oneOf": [
+                { "type": "string", "minLength": 1 },
+                {
+                  "type": "object",
+                  "properties": {
+                    "path": { "type": "string", "minLength": 1 },
+                    "url": { "type": "string", "minLength": 1 },
+                    "executable": { "type": "string", "minLength": 1 }
+                  },
+                  "oneOf": [{ "required": ["path"] }, { "required": ["url"] }],
+                  "additionalProperties": false
+                }
+              ]
+            }
+          }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

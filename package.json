@@ -1,0 +1,55 @@
+{
+  "name": "agulater",
+  "version": "0.2.1-rc.1",
+  "description": "Prepare .agents packages and manage Agul and its extensions.",
+  "license": "Apache-2.0",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/storious/agulater.git"
+  },
+  "homepage": "https://github.com/storious/agulater#readme",
+  "bugs": {
+    "url": "https://github.com/storious/agulater/issues"
+  },
+  "engines": {
+    "bun": ">=1.4.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "packageManager": "bun@1.4.0",
+  "type": "module",
+  "bin": {
+    "agulater": "tools/agulater.ts"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "THIRD_PARTY_NOTICES",
+    "docs",
+    "schemas",
+    "tools/agulater.ts",
+    "tools/generated/package-v2-validator.js",
+    "tools/lib/agulater.ts",
+    "tools/lib/package-schema.ts",
+    "tools/lib/runtime-manager.ts",
+    "tools/lib/semver.ts",
+    "tools/lib/version.ts"
+  ],
+  "scripts": {
+    "postinstall": "bun tools/agulater.ts setup user --if-missing",
+    "agulater": "bun tools/agulater.ts",
+    "build:standalone": "bun build --compile --no-compile-autoload-dotenv --no-compile-autoload-bunfig --outfile dist/agulater tools/agulater.ts",
+    "generate:schema": "bun tools/generate-package-validator.ts",
+    "check:schema": "bun tools/generate-package-validator.ts --check",
+    "test": "bun test",
+    "smoke": "bun tools/agulater.ts --help",
+    "smoke:standalone": "bun tools/smoke-standalone.ts"
+  },
+  "dependencies": {
+    "proper-lockfile": "4.1.2"
+  },
+  "devDependencies": {
+    "ajv": "8.20.0"
+  }
+}

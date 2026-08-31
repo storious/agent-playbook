@@ -1,0 +1,22 @@
+{
+  "format": "agulater/snapshot/v1",
+  "package": {
+    "id": "agulater",
+    "version": "0.2.1-rc.1"
+  },
+  "instructions": {
+    "source": "AGENTS.md",
+    "path": "instructions.md"
+  },
+  "resources": {
+    "skills": [],
+    "plugins": [],
+    "contexts": [],
+    "packages": []
+  },
+  "dependencies": {
+    "skills": [],
+    "plugins": [],
+    "packages": []
+  }
+}

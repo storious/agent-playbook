@@ -1,0 +1,4 @@
+/.bun-cache/
+/build/
+/dist/
+/node_modules/

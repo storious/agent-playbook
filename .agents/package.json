@@ -1,0 +1,7 @@
+{
+  "format": "agulater/package/v2",
+  "id": "agulater",
+  "version": "0.2.1-rc.1",
+  "description": "Development assistant for Agulater package preparation and lifecycle tooling",
+  "instructions": "AGENTS.md"
+}

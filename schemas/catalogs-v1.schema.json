@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agulater:catalogs:v1",
+  "title": "Agulater catalog registry v1",
+  "type": "object",
+  "required": ["format", "catalogs"],
+  "properties": {
+    "format": { "const": "agulater/catalogs/v1" },
+    "catalogs": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "url"],
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9](?:[a-z0-9._-]*[a-z0-9])?$" },
+          "url": { "type": "string", "minLength": 1 }
+        },
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}

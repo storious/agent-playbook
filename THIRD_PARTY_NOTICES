@@ -1,0 +1,181 @@
+Agulater third-party notices
+=============================
+
+This file applies to the Agulater standalone executables and to the optional
+npm compatibility package. It was reviewed against Bun 1.4.0 and bun.lock for
+Agulater 0.2.1-rc.1.
+
+The standalone executable is produced with `bun build --compile`. Bun's
+documentation states that this embeds both the application bundle and a copy
+of the Bun runtime. The npm compatibility package does not embed Bun; Bun is
+its declared runtime.
+
+Bun runtime 1.4.0
+-----------------
+
+Project: https://github.com/oven-sh/bun
+Version-pinned license and component notices:
+https://github.com/oven-sh/bun/blob/bun-v1.4.0/LICENSE.md
+
+Bun itself is MIT licensed. Bun's official notice records that its runtime
+statically links JavaScriptCore and WebKit under LGPL-2 and explains how to
+obtain the patched WebKit source and rebuild/relink Bun:
+
+  https://github.com/oven-sh/webkit
+  https://github.com/oven-sh/bun/blob/bun-v1.4.0/LICENSE.md#javascriptcore
+
+The version-pinned notice identifies these linked components and licenses:
+
+  JavaScriptCore / WebKit       LGPL-2
+  BoringSSL                     multiple upstream licenses
+  Brotli                        MIT
+  libarchive                    multiple upstream licenses
+  lol-html                      BSD-3-Clause
+  ls-hpack                      MIT; bundled xxhash is BSD-2-Clause
+  ls-qpack                      MIT
+  lsquic                        MIT; Chromium-derived portions BSD-3-Clause
+  mimalloc                      MIT
+  picohttpparser                Perl or MIT
+  zstd                          BSD or GPL-2.0
+  simdutf                       Apache-2.0
+  TinyCC                        LGPL-2.1
+  uSockets                      Apache-2.0
+  zlib-ng                       zlib
+  c-ares                        MIT
+  ICU                           ICU
+  libbase64                     BSD-2-Clause
+  libuv on Windows              MIT
+  libdeflate                    MIT
+  libjpeg-turbo                 BSD-3-Clause / IJG / zlib
+  libspng                       BSD-2-Clause
+  libwebp                       BSD-3-Clause
+  Highway                       Apache-2.0
+  uucode                        MIT
+  uWebSockets-derived code      Apache-2.0
+  TigerBeetle-derived IO code   Apache-2.0
+  LLVM libc++abi fallback       Apache-2.0 with LLVM exception
+
+Bun's official notice also identifies its MIT-licensed Node.js compatibility
+polyfills. The version-pinned Bun notice above contains upstream links and is
+the authoritative component inventory for the embedded runtime.
+
+JavaScript packages
+-------------------
+
+The following versions are fixed by bun.lock. "Bundled" means application or
+generated-validator code may be present in a standalone executable or source
+package. "Build" means the package is used to generate or verify that code and
+is recorded here for a complete lockfile audit.
+
+  proper-lockfile 4.1.2       MIT           bundled
+  graceful-fs 4.2.11          ISC           bundled
+  retry 0.12.0                MIT           bundled
+  signal-exit 3.0.7           ISC           bundled
+  ajv 8.20.0                  MIT           bundled/generated code
+  fast-deep-equal 3.1.3       MIT           bundled/generated code
+  fast-uri 3.1.6              BSD-3-Clause  build
+  json-schema-traverse 1.0.0  MIT           build
+  require-from-string 2.0.2   MIT           build
+
+MIT notices
+-----------
+
+Copyright notices:
+
+  Bun: copyright held by the Bun project contributors.
+  proper-lockfile: Copyright (c) 2018 Made With MOXY Lda
+    <hello@moxy.studio>
+  retry: Copyright (c) 2011 Tim Koschützki and Felix Geisendörfer
+  Ajv: Copyright (c) 2015-2021 Evgeny Poberezkin
+  fast-deep-equal: Copyright (c) 2017 Evgeny Poberezkin
+  json-schema-traverse: Copyright (c) 2017 Evgeny Poberezkin
+  require-from-string: Copyright (c) Vsevolod Strukchinsky
+    <floatdrop@gmail.com>
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+ISC notices
+-----------
+
+graceful-fs:
+
+  Copyright (c) 2011-2022 Isaac Z. Schlueter, Ben Noordhuis, and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+signal-exit:
+
+  Copyright (c) 2015, Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES WITH
+REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY
+AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY SPECIAL, DIRECT,
+INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES WHATSOEVER RESULTING FROM
+LOSS OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE OR
+OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR
+PERFORMANCE OF THIS SOFTWARE.
+
+BSD-3-Clause notice
+-------------------
+
+fast-uri:
+
+  Copyright (c) 2011-2021, Gary Court until
+  https://github.com/garycourt/uri-js/commit/a1acf730b4bba3f1097c9f52e7d9d3aba8cdcaae
+  Copyright (c) 2021-present The Fastify team
+  https://github.com/fastify/fastify#team
+  All rights reserved.
+
+Redistribution and use in source and binary forms, with or without
+modification, are permitted provided that the following conditions are met:
+
+1. Redistributions of source code must retain the above copyright notice,
+   this list of conditions and the following disclaimer.
+2. Redistributions in binary form must reproduce the above copyright notice,
+   this list of conditions and the following disclaimer in the documentation
+   and/or other materials provided with the distribution.
+3. The names of any contributors may not be used to endorse or promote
+   products derived from this software without specific prior written
+   permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+POSSIBILITY OF SUCH DAMAGE.

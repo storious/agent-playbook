@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:agulater:harness:v1",
+  "title": "Agulater Harness v1",
+  "type": "object",
+  "required": ["format", "task_template", "requirements", "defaults", "result", "completion"],
+  "properties": {
+    "format": { "const": "agulater/harness/v1" },
+    "task_template": { "type": "string", "minLength": 1 },
+    "requirements": {
+      "type": "object",
+      "required": ["min_context_window", "capabilities"],
+      "properties": {
+        "min_context_window": { "type": "integer", "minimum": 1 },
+        "capabilities": { "$ref": "#/$defs/strings" }
+      },
+      "additionalProperties": false
+    },
+    "defaults": {
+      "type": "object",
+      "required": ["reasoning_effort", "max_rounds", "max_tool_calls", "max_tokens", "timeout_seconds"],
+      "properties": {
+        "reasoning_effort": { "type": "string", "minLength": 1 },
+        "max_rounds": { "$ref": "#/$defs/positive" },
+        "max_tool_calls": { "$ref": "#/$defs/positive" },
+        "max_tokens": { "$ref": "#/$defs/positive" },
+        "timeout_seconds": { "$ref": "#/$defs/positive" }
+      },
+      "additionalProperties": false
+    },
+    "result": {
+      "type": "object",
+      "required": ["format", "summary_max_chars", "evidence_max_items"],
+      "properties": {
+        "format": { "const": "agul/handoff/v1" },
+        "summary_max_chars": { "$ref": "#/$defs/positive" },
+        "evidence_max_items": { "$ref": "#/$defs/positive" }
+      },
+      "additionalProperties": false
+    },
+    "completion": {
+      "type": "object",
+      "required": ["verification", "rules"],
+      "properties": {
+        "verification": { "enum": ["required", "when_changed", "none"] },
+        "rules": { "$ref": "#/$defs/strings" }
+      },
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false,
+  "$defs": {
+    "positive": { "type": "integer", "minimum": 1 },
+    "strings": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+  }
+}
