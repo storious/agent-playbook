@@ -37,6 +37,7 @@ describe("standalone release contract", () => {
     expect(release.slice(github, npm)).toContain("gh release create");
     expect(release.slice(npm)).toContain("if: env.NPM_TOKEN != ''");
     expect(release.slice(npm)).toContain("if: env.NPM_TOKEN == ''");
+    expect(release).toContain('tarball="${PWD}/dist/agulater-${version}.tgz"');
   });
 
   test("uses the Agulater repository and keeps standalone install first", () => {

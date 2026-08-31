@@ -46,7 +46,7 @@ jobs:
         run: |
           mkdir -p dist
           bun pm pack --destination dist --ignore-scripts
-          tarball="dist/agulater-${version}.tgz"
+          tarball="${PWD}/dist/agulater-${version}.tgz"
           test -f "${tarball}"
           echo "tarball=${tarball}" >> "${GITHUB_ENV}"
 
