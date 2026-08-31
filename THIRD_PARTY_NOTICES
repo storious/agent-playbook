@@ -2,8 +2,7 @@ Agulater third-party notices
 =============================
 
 This file applies to the Agulater standalone executables and to the optional
-npm compatibility package. It was reviewed against Bun 1.4.0 and bun.lock for
-Agulater 0.2.1-rc.1.
+npm compatibility package. It was reviewed against Bun 1.4.0 and bun.lock.
 
 The standalone executable is produced with `bun build --compile`. Bun's
 documentation states that this embeds both the application bundle and a copy

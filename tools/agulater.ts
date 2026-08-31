@@ -31,49 +31,8 @@ import {
   updateRuntime,
   type RuntimeChannel,
 } from "./lib/runtime-manager.ts";
+import { helpFor } from "./lib/help.ts";
 import { agulaterVersion } from "./lib/version.ts";
-
-const help = `Agulater prepares .agents packages for Agul.
-
-Usage:
-  agulater create [name] [--path <workspace>]
-  agulater add <source> [--type skill|plugin|package] [--name <name>]
-                        [--path <workspace> | --user [--home <directory>]] [--json]
-  agulater update <name> | --all [--type skill|plugin|package]
-                        [--path <workspace> | --user [--home <directory>]] [--json]
-  agulater remove <name> [--type skill|plugin|package]
-                           [--path <workspace> | --user [--home <directory>]]
-  agulater prepare [--path <workspace> | --user] [--home <directory>]
-  agulater sync [--catalog <catalog.json>] [--path <workspace> | --user]
-                 [--home <directory>]
-  agulater setup user [--if-missing] [--home <directory>]
-  agulater migrate user [--home <directory>]
-  agulater catalog list [--home <directory>] [--json]
-  agulater catalog add <id> <url-or-path> [--home <directory>] [--json]
-  agulater catalog remove <id> [--home <directory>] [--json]
-  agulater catalog refresh [catalog] [--home <directory>] [--json]
-  agulater catalog search [query] [--home <directory>] [--json]
-  agulater runtime install [--channel stable|next] [--prefix <directory>]
-                            [--repository <owner/name> | --url <release-index>] [--json]
-  agulater runtime update [--channel stable|next] [--prefix <directory>]
-                           [--repository <owner/name> | --url <release-index>] [--json]
-  agulater runtime status [--prefix <directory>] [--json]
-  agulater --version
-  agulater --help`;
-
-const catalogHelp = `Usage:
-  agulater catalog list [--home <directory>] [--json]
-  agulater catalog add <id> <url-or-path> [--home <directory>] [--json]
-  agulater catalog remove <id> [--home <directory>] [--json]
-  agulater catalog refresh [catalog] [--home <directory>] [--json]
-  agulater catalog search [query] [--home <directory>] [--json]`;
-
-const runtimeHelp = `Usage:
-  agulater runtime install [--channel stable|next] [--prefix <directory>]
-                            [--repository <owner/name> | --url <release-index>] [--json]
-  agulater runtime update [--channel stable|next] [--prefix <directory>]
-                           [--repository <owner/name> | --url <release-index>] [--json]
-  agulater runtime status [--prefix <directory>] [--json]`;
 
 type Parsed = {
   positionals: string[];
@@ -83,11 +42,11 @@ type Parsed = {
 
 export async function run(args: string[]): Promise<void> {
   if (args.length === 0) {
-    console.log(help);
+    console.log(helpFor(args));
     return;
   }
   if (args.some((argument) => argument === "--help" || argument === "-h")) {
-    console.log(args[0] === "catalog" ? catalogHelp : args[0] === "runtime" ? runtimeHelp : help);
+    console.log(helpFor(args));
     return;
   }
   if (args[0] === "--version" || args[0] === "-V") {
@@ -188,8 +147,8 @@ export async function run(args: string[]): Promise<void> {
       return;
     }
     case "catalog": {
-      if (groupHelpRequested(rest)) {
-        console.log(catalogHelp);
+      if (rest.length === 0) {
+        console.log(helpFor([command, ...rest]));
         return;
       }
       const parsed = parse(rest, ["home"], ["json"]);
@@ -237,8 +196,8 @@ export async function run(args: string[]): Promise<void> {
       throw new Error("usage: agulater catalog list|add|remove|refresh|search");
     }
     case "runtime": {
-      if (groupHelpRequested(rest)) {
-        console.log(runtimeHelp);
+      if (rest.length === 0) {
+        console.log(helpFor([command, ...rest]));
         return;
       }
       const parsed = parse(rest, ["channel", "prefix", "repository", "url", "home"], ["json"]);
@@ -277,10 +236,6 @@ export async function run(args: string[]): Promise<void> {
     default:
       throw new Error(`unknown command: ${command}`);
   }
-}
-
-function groupHelpRequested(args: string[]): boolean {
-  return args.length === 0 || (args.length === 1 && (args[0] === "--help" || args[0] === "-h"));
 }
 
 function catalogReference(source: string): { catalog: string; entry: string } | undefined {

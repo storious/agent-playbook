@@ -2,7 +2,7 @@
   "format": "agulater/snapshot/v1",
   "package": {
     "id": "agulater",
-    "version": "0.2.1-rc.1"
+    "version": "0.2.1-rc.2"
   },
   "instructions": {
     "source": "AGENTS.md",

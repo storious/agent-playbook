@@ -1250,17 +1250,19 @@ describe("Agulater v2 product flow", () => {
     expect(cli("create", "helper", "--path", workspace).exitCode).toBe(0);
     expect(cli("prepare", "--path", workspace, "--home", temporaryDirectory()).exitCode).toBe(0);
     const help = cli("--help");
-    expect(help.stdout.toString()).toContain("skill|plugin|package");
-    expect(help.stdout.toString()).toContain("--if-missing");
-    expect(cli("catalog", "--help").stdout.toString()).toContain("catalog add <id> <url-or-path>");
-    expect(cli("catalog").stdout.toString()).toContain("catalog search [query]");
-    expect(cli("runtime", "--help").stdout.toString()).toContain("runtime install");
-    expect(cli("runtime").stdout.toString()).toContain("runtime status");
+    expect(help.stdout.toString()).toContain("Quick start:");
+    expect(help.stdout.toString()).toContain("Install one Skill, Plugin, or Package.");
+    expect(help.stdout.toString()).toContain("Run agulater <command> --help");
+    expect(cli("catalog", "--help").stdout.toString()).toContain("Discover extensions through registered Catalogs.");
+    expect(cli("catalog").stdout.toString()).toContain("Search extension ids, names, and descriptions.");
+    expect(cli("runtime", "--help").stdout.toString()).toContain("Install and update standalone Agul runtimes.");
+    expect(cli("runtime").stdout.toString()).toContain("status   Show the active version, channel, and launcher.");
     for (const [command, expected] of [
-      [["runtime", "install", "--help"], "runtime install"],
-      [["catalog", "add", "--help"], "catalog add <id> <url-or-path>"],
-      [["add", "--help"], "agulater add <source>"],
-      [["prepare", "-h"], "agulater prepare"],
+      [["runtime", "install", "--help"], "default: stable on first install"],
+      [["catalog", "add", "--help"], "<url-or-path>"],
+      [["add", "--help"], "--type <type>"],
+      [["prepare", "-h"], "the new launch, resources, Specialists, and Pools are complete"],
+      [["setup", "user", "--help"], "Existing unmanaged .agents directories are left untouched."],
     ] as const) {
       const result = cli(...command);
       expect(result.exitCode).toBe(0);
@@ -1272,6 +1274,7 @@ describe("Agulater v2 product flow", () => {
     expect(unknown.stderr.toString()).toContain("unknown option: --unknown");
     const metadata = readJson(join(import.meta.dir, "..", "package.json")) as any;
     expect(metadata.scripts.postinstall).toBe("bun tools/agulater.ts setup user --if-missing");
+    expect(metadata.files).toContain("tools/lib/help.ts");
   });
 
   test("ships parseable formal schemas", () => {

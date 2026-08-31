@@ -17,7 +17,9 @@ const standaloneEnvironment = Object.fromEntries(
 standaloneEnvironment.PATH = emptyPath;
 try {
   expectOutput(["--version"], `agulater ${agulaterVersion}`);
-  expectOutput(["--help"], "Agulater prepares .agents packages for Agul.");
+  expectOutput(["--help"], "Install Agul, manage extensions, and prepare .agents packages.");
+  expectOutput(["runtime", "install", "--help"], "default: stable on first install");
+  expectOutput(["catalog", "search", "--help"], "Catalogs without a local cache are refreshed");
   expectOutput(["setup", "user", "--if-missing", "--home", home], "created");
 
   const packagePath = join(home, ".agents", "package.json");

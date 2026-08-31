@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+- Reworked CLI help into a concise first-run guide, command groups, and focused
+  pages for every command with arguments, options, defaults, and examples.
+- Kept help rendering in one typed module and added source, standalone, width,
+  package-content, and release-metadata regression coverage.
+
 ## 0.2.1-rc.2 — command help polish
 
 - Made `--help` and `-h` work consistently after top-level and nested

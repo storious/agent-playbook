@@ -64,6 +64,7 @@ reaches a v2 Package, `--type` and `--name` can select that Package or one of
 the Skill, Plugin, and child Package resources declared directly in its
 manifest. Other contents beneath that Package are not scanned.
 
-Use `agulater catalog --help` for Catalog commands and `agulater --help` for
-the full command surface. See [Packages and preparation](package-and-prepare.md)
-for the compiled result.
+Use `agulater catalog --help` for the Catalog overview or
+`agulater catalog search --help` for exact options and examples. Run
+`agulater --help` for the first-run path and full command map. See
+[Packages and preparation](package-and-prepare.md) for the compiled result.
