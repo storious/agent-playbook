@@ -15,6 +15,13 @@ import { homedir, platform as hostPlatform, arch as hostArch, tmpdir } from "nod
 import { basename, dirname, join, resolve } from "node:path";
 import lockfile from "proper-lockfile";
 import { compareSemVer } from "./semver.ts";
+import {
+  ensureUserPath,
+  pathIsReady,
+  pathRegistrationFormat,
+  removeUserPath,
+  type PathRegistration,
+} from "./path-environment.ts";
 
 export const runtimeReleaseFormat = "agulater/runtime-releases/v1" as const;
 export const runtimeInstallFormat = "agulater/runtime-install/v1" as const;
@@ -65,6 +72,7 @@ export type RuntimeInstallRecord = {
   shim: string;
   repository?: string;
   url?: string;
+  environment?: PathRegistration;
 };
 
 export type RuntimeOptions = {
@@ -73,12 +81,23 @@ export type RuntimeOptions = {
   repository?: string;
   url?: string;
   home?: string;
+  modifyPath?: boolean;
 };
 
 export type RuntimeResult = RuntimeInstallRecord & {
   prefix: string;
   installed: boolean;
+  pathReady: boolean;
   reason?: string;
+};
+
+export type RuntimeUninstallResult = {
+  format: "agulater/runtime-uninstall/v1";
+  prefix: string;
+  removed: boolean;
+  version?: string;
+  shim?: string;
+  pathRemoved: boolean;
 };
 
 const defaultRepository = "storious/agul";
@@ -148,8 +167,29 @@ async function installRuntimeAtLeast(
         shim,
         ...(url ? { url } : { repository: repository! }),
       };
-      commitRuntimeActivation(prefix, record);
-      return { ...record, prefix, installed: true };
+      let addedEnvironment: PathRegistration | undefined;
+      if (options.modifyPath ?? options.prefix === undefined) {
+        const registration = ensureUserPath(bin, { home: options.home });
+        if (registration.managed) addedEnvironment = registration;
+        record.environment = active?.environment?.directory === registration.directory && active.environment.managed
+          ? { ...registration, managed: true }
+          : registration;
+      } else if (active?.environment) {
+        record.environment = active.environment;
+      }
+      try {
+        commitRuntimeActivation(prefix, record);
+      } catch (error) {
+        if (addedEnvironment) {
+          try {
+            removeUserPath(addedEnvironment, { home: options.home });
+          } catch (rollbackError) {
+            throw new Error(`${errorMessage(error)}; PATH rollback failed: ${errorMessage(rollbackError)}`);
+          }
+        }
+        throw error;
+      }
+      return { ...record, prefix, installed: true, pathReady: pathIsReady(bin) };
     } finally {
       await releaseRuntimeLock(release);
     }
@@ -171,13 +211,49 @@ export async function updateRuntime(options: RuntimeOptions = {}): Promise<Runti
         : { repository: current.repository ?? defaultRepository };
   const channel = options.channel ?? current.channel;
   const minimumVersion = channel === current.channel ? current.version : undefined;
-  return installRuntimeAtLeast({ ...options, ...source, prefix, channel }, minimumVersion, current);
+  const modifyPath = options.modifyPath ?? options.prefix === undefined;
+  return installRuntimeAtLeast({ ...options, ...source, prefix, channel, modifyPath }, minimumVersion, current);
+}
+
+export async function uninstallRuntime(
+  options: Pick<RuntimeOptions, "prefix" | "home"> & { keepPath?: boolean } = {},
+): Promise<RuntimeUninstallResult> {
+  const prefix = resolve(options.prefix ?? defaultRuntimePrefix(options.home));
+  const current = readInstallRecord(prefix);
+  if (!current) {
+    return { format: "agulater/runtime-uninstall/v1", prefix, removed: false, pathRemoved: false };
+  }
+  const release = await acquireRuntimeLock(prefix);
+  try {
+    const active = readInstallRecord(prefix);
+    if (!sameInstallRecord(current, active)) throw new Error(`Agul runtime changed at ${prefix}; retry the command`);
+    if (resolve(current.shim).startsWith(`${prefix}${process.platform === "win32" ? "\\" : "/"}`)) {
+      rmSync(prefix, { recursive: true, force: true });
+    } else {
+      rmSync(current.shim, { force: true });
+      rmSync(prefix, { recursive: true, force: true });
+    }
+    const pathRemoved = !options.keepPath && current.environment
+      ? removeUserPath(current.environment, { home: options.home })
+      : false;
+    return {
+      format: "agulater/runtime-uninstall/v1",
+      prefix,
+      removed: true,
+      version: current.version,
+      shim: current.shim,
+      pathRemoved,
+    };
+  } finally {
+    await releaseRuntimeLock(release);
+  }
 }
 
 export function runtimeStatus(options: Pick<RuntimeOptions, "prefix" | "home"> = {}): RuntimeResult | {
   format: typeof runtimeInstallFormat;
   prefix: string;
   installed: false;
+  pathReady?: boolean;
   reason?: string;
 } {
   const prefix = resolve(options.prefix ?? defaultRuntimePrefix(options.home));
@@ -189,18 +265,19 @@ export function runtimeStatus(options: Pick<RuntimeOptions, "prefix" | "home"> =
       ...record,
       prefix,
       installed: false,
+      pathReady: pathIsReady(dirname(record.shim)),
       reason: `legacy Agul executable shadows the managed launcher: ${shadow}`,
     };
   }
-  if (!existsSync(record.executable)) return { ...record, prefix, installed: false, reason: "managed executable is missing" };
-  if (!existsSync(record.shim)) return { ...record, prefix, installed: false, reason: "launcher is missing" };
+  if (!existsSync(record.executable)) return { ...record, prefix, installed: false, pathReady: pathIsReady(dirname(record.shim)), reason: "managed executable is missing" };
+  if (!existsSync(record.shim)) return { ...record, prefix, installed: false, pathReady: pathIsReady(dirname(record.shim)), reason: "launcher is missing" };
   try {
     verifyRuntime(record.executable, record.version);
     verifyRuntime(record.shim, record.version);
   } catch (error) {
-    return { ...record, prefix, installed: false, reason: error instanceof Error ? error.message : String(error) };
+    return { ...record, prefix, installed: false, pathReady: pathIsReady(dirname(record.shim)), reason: error instanceof Error ? error.message : String(error) };
   }
-  return { ...record, prefix, installed: true };
+  return { ...record, prefix, installed: true, pathReady: pathIsReady(dirname(record.shim)) };
 }
 
 export function defaultRuntimePrefix(home = homedir()): string {
@@ -586,6 +663,9 @@ function readInstallRecord(prefix: string): RuntimeInstallRecord | undefined {
   const channel = value.channel === "stable" || value.channel === "next" ? value.channel : undefined;
   const platform = runtimePlatforms.includes(value.platform as RuntimePlatform) ? value.platform as RuntimePlatform : undefined;
   if (!channel || !platform) throw new Error(`invalid runtime state at ${path}`);
+  if (value.environment !== undefined && !isPathRegistration(value.environment)) {
+    throw new Error(`invalid runtime environment state at ${path}`);
+  }
   return {
     format: runtimeInstallFormat,
     version: semanticVersion(value.version, `${path}.version`),
@@ -595,6 +675,7 @@ function readInstallRecord(prefix: string): RuntimeInstallRecord | undefined {
     shim: text(value.shim, `${path}.shim`),
     ...(typeof value.repository === "string" ? { repository: value.repository } : {}),
     ...(typeof value.url === "string" ? { url: value.url } : {}),
+    ...(isPathRegistration(value.environment) ? { environment: value.environment } : {}),
   };
 }
 
@@ -607,7 +688,17 @@ function sameInstallRecord(left: RuntimeInstallRecord | undefined, right: Runtim
     && left.executable === right.executable
     && left.shim === right.shim
     && left.repository === right.repository
-    && left.url === right.url;
+    && left.url === right.url
+    && JSON.stringify(left.environment) === JSON.stringify(right.environment);
+}
+
+function isPathRegistration(value: unknown): value is PathRegistration {
+  return isRecord(value)
+    && value.format === pathRegistrationFormat
+    && typeof value.directory === "string"
+    && (value.target === "windows-user" || value.target === "profile")
+    && typeof value.managed === "boolean"
+    && (value.profile === undefined || typeof value.profile === "string");
 }
 
 function parseRelease(value: unknown, label: string): RuntimeRelease {

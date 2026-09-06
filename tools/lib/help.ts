@@ -129,10 +129,12 @@ const pages: Readonly<Record<string, HelpPage>> = {
     ],
   },
   remove: {
-    heading: "Remove an installed extension and prepare the target.",
+    heading: "Remove installed extensions and prepare the target.",
     usage: [
       "agulater remove <name> [--type <type>]",
       "                       [--path <workspace> | --user] [--home <directory>]",
+      "agulater remove --all --type <type>",
+      "                    [--path <workspace> | --user] [--home <directory>] [--json]",
     ],
     sections: [
       {
@@ -141,11 +143,20 @@ const pages: Readonly<Record<string, HelpPage>> = {
       },
       {
         title: "Options",
-        items: [sourceTypeOption, ...targetOptions, helpOption],
+        items: [
+          ["--all", "Remove every Agulater-managed extension of the selected type."],
+          sourceTypeOption,
+          ...targetOptions,
+          jsonOption,
+          helpOption,
+        ],
       },
       {
         title: "Examples",
-        lines: ["agulater remove web-search --path . --type plugin"],
+        lines: [
+          "agulater remove web-search --path . --type plugin",
+          "agulater remove --all --type plugin --path .",
+        ],
       },
     ],
   },
@@ -357,7 +368,7 @@ const pages: Readonly<Record<string, HelpPage>> = {
     ],
   },
   runtime: {
-    heading: "Install and update standalone Agul runtimes.",
+    heading: "Manage standalone Agul runtimes.",
     details: [
       "Agulater selects a release, verifies its version, and switches a small",
       "launcher. It never starts Agul or participates in a model session.",
@@ -370,6 +381,7 @@ const pages: Readonly<Record<string, HelpPage>> = {
           ["install", "Install and activate an Agul release."],
           ["update", "Update the managed runtime without downgrading."],
           ["status", "Show the active version, channel, and launcher."],
+          ["uninstall", "Remove the managed Agul runtime and its PATH entry."],
         ],
       },
       {
@@ -388,7 +400,7 @@ const pages: Readonly<Record<string, HelpPage>> = {
     usage: [
       "agulater runtime install [--channel <stable|next>] [--prefix <directory>]",
       "                         [--repository <owner/name> | --url <release-index>]",
-      "                         [--home <directory>] [--json]",
+      "                         [--home <directory>] [--modify-path | --no-modify-path] [--json]",
     ],
     sections: [
       {
@@ -399,6 +411,8 @@ const pages: Readonly<Record<string, HelpPage>> = {
           ["--repository <owner/name>", "GitHub release repository (default: storious/agul)."],
           ["--url <release-index>", "Local path or URL to agulater/runtime-releases/v1."],
           runtimeHomeOption,
+          ["--modify-path", "Add the launcher directory to PATH (default for the standard prefix)."],
+          ["--no-modify-path", "Do not change PATH."],
           jsonOption,
           helpOption,
         ],
@@ -418,7 +432,7 @@ const pages: Readonly<Record<string, HelpPage>> = {
     usage: [
       "agulater runtime update [--channel <stable|next>] [--prefix <directory>]",
       "                        [--repository <owner/name> | --url <release-index>]",
-      "                        [--home <directory>] [--json]",
+      "                        [--home <directory>] [--modify-path | --no-modify-path] [--json]",
     ],
     sections: [
       {
@@ -429,6 +443,8 @@ const pages: Readonly<Record<string, HelpPage>> = {
           ["--repository <owner/name>", "Use releases from another GitHub repository."],
           ["--url <release-index>", "Use a local or remote runtime release index."],
           runtimeHomeOption,
+          ["--modify-path", "Persist a custom launcher directory in PATH."],
+          ["--no-modify-path", "Do not repair or change PATH."],
           jsonOption,
           helpOption,
         ],
@@ -458,6 +474,27 @@ const pages: Readonly<Record<string, HelpPage>> = {
       },
     ],
   },
+  "runtime uninstall": {
+    heading: "Remove the Agul runtime managed by Agulater.",
+    details: [
+      "All managed Agul versions and the launcher are removed. A PATH entry",
+      "is removed only when Agulater originally added it.",
+    ],
+    usage: ["agulater runtime uninstall [--prefix <directory>] [--home <directory>] [--keep-path] [--json]"],
+    sections: [
+      {
+        title: "Options",
+        items: [
+          ["--prefix <directory>", "Select a custom managed runtime directory."],
+          runtimeHomeOption,
+          ["--keep-path", "Leave an Agulater-managed PATH entry in place."],
+          jsonOption,
+          helpOption,
+        ],
+      },
+      { title: "Examples", lines: ["agulater runtime uninstall", "agulater runtime uninstall --keep-path"] },
+    ],
+  },
 };
 
 const topLevelPage = (): HelpPage => ({
@@ -484,6 +521,7 @@ const topLevelPage = (): HelpPage => ({
         ["runtime install", "Install and activate an Agul release."],
         ["runtime update", "Update the managed Agul runtime."],
         ["runtime status", "Show the active version and launcher."],
+        ["runtime uninstall", "Remove the managed Agul runtime."],
       ],
     },
     {
@@ -522,7 +560,7 @@ const topLevelPage = (): HelpPage => ({
 });
 
 const catalogCommands = new Set(["list", "add", "remove", "refresh", "search"]);
-const runtimeCommands = new Set(["install", "update", "status"]);
+const runtimeCommands = new Set(["install", "update", "status", "uninstall"]);
 
 export function helpFor(args: readonly string[]): string {
   const key = helpKey(args);

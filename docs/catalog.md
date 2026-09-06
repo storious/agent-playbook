@@ -43,6 +43,16 @@ agulater update <id> --user
 agulater update --all --user
 ```
 
+Remove one extension by id, or every plugin installed and tracked by Agulater:
+
+```console
+agulater remove web-search --type plugin --user
+agulater remove --all --type plugin --user
+```
+
+The batch form uses Agulater's source records. It preserves plugins declared
+manually in the package and does not remove the `.agents` package itself.
+
 ## Managed Store and sync
 
 `sync` installs Catalog or direct Git dependencies by exact version:

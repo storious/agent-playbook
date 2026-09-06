@@ -37,9 +37,10 @@ irm https://github.com/storious/agulater/releases/download/v0.2.1-rc.2/install.p
 These recommended install commands do not need Bun, Node.js, or npm.
 
 The installer selects the current platform, installs `agulater` in a user bin
-directory, and runs `agulater setup user --if-missing`. Windows updates the
-user `PATH`; Linux and macOS print one short hint only when `~/.local/bin` is
-not already present. Setup preserves an existing `~/.agents` package; for a
+directory, runs `agulater setup user --if-missing`, and adds that bin directory
+to the user `PATH` when needed. Pass `--no-modify-path` on Unix or
+`-NoModifyPath` on Windows to opt out. Setup preserves an existing
+`~/.agents` package; for a
 new user it creates the general package and registers the AgentKube Catalog
 without downloading extensions.
 
@@ -80,6 +81,14 @@ agulater runtime status
 agulater runtime update --channel next
 ```
 
+The normal runtime install also makes `agul` discoverable through `PATH`.
+Custom `--prefix` installs leave PATH alone unless `--modify-path` is supplied.
+To remove every managed Agul version and undo a PATH entry that Agulater added:
+
+```console
+agulater runtime uninstall
+```
+
 Find and install one extension:
 
 ```console
@@ -92,6 +101,13 @@ Update installed user extensions:
 
 ```console
 agulater update --all --user
+```
+
+Remove all plugins installed by Agulater while preserving manually declared
+plugins and the rest of the `.agents` package:
+
+```console
+agulater remove --all --type plugin --user
 ```
 
 Agulater keeps the runtime, extensions, and source `.agents` package separate:

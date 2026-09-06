@@ -31,10 +31,11 @@ describe("Agulater command help", () => {
       [["catalog", "remove", "--help"], "Remove a Catalog registration", "catalog refresh [catalog]"],
       [["catalog", "refresh", "--help"], "default: every registered Catalog", "<url-or-path>"],
       [["catalog", "search", "--help"], "refreshed before the search", "catalog remove <id>"],
-      [["runtime", "--help"], "Install and update standalone Agul runtimes.", "--type"],
+      [["runtime", "--help"], "Manage standalone Agul runtimes.", "--type"],
       [["runtime", "install", "--help"], "default: stable on first install", "runtime update"],
       [["runtime", "update", "--help"], "current release channel and source are retained", "runtime install"],
       [["runtime", "status", "--help"], "Show the managed Agul runtime and launcher.", "--repository"],
+      [["runtime", "uninstall", "--help"], "A PATH entry", "--repository"],
     ] as const) {
       const output = helpFor(args);
       expect(output).toContain(expected);

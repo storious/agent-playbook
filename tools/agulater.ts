@@ -16,6 +16,7 @@ import {
   refreshCatalogs,
   removeCatalog,
   removeExtension,
+  removeManagedExtensions,
   searchCatalogs,
   setCatalog,
   setupUser,
@@ -28,6 +29,7 @@ import {
 import {
   installRuntime,
   runtimeStatus,
+  uninstallRuntime,
   updateRuntime,
   type RuntimeChannel,
 } from "./lib/runtime-manager.ts";
@@ -97,12 +99,25 @@ export async function run(args: string[]): Promise<void> {
       return;
     }
     case "remove": {
-      const parsed = parse(rest, ["path", "home", "type"], ["user"]);
-      expectPositionals(parsed, 1, 1, "remove <name>");
+      const parsed = parse(rest, ["path", "home", "type"], ["user", "all", "json"]);
+      expectPositionals(parsed, parsed.flags.has("all") ? 0 : 1, parsed.flags.has("all") ? 0 : 1, "remove <name> | --all --type <type>");
       const type = parseType(parsed.values.get("type"));
       const root = targetRoot(parsed, false);
+      if (parsed.flags.has("all")) {
+        if (!type) throw new Error("remove --all requires --type skill, plugin, or package");
+        const results = removeManagedExtensions(root, type);
+        if (parsed.flags.has("json")) {
+          console.log(JSON.stringify({ format: "agulater/remove-result/v1", removed: results.map(extensionJson) }));
+        } else if (results.length === 0) {
+          console.log(`no Agulater-managed ${type}s to remove from ${root}`);
+        } else {
+          console.log(`removed ${results.length} managed ${type}${results.length === 1 ? "" : "s"} from ${root}`);
+        }
+        return;
+      }
       const result = removeExtension(root, parsed.positionals[0]!, type);
-      console.log(`removed ${result.type} ${result.name} from ${root}`);
+      if (parsed.flags.has("json")) console.log(JSON.stringify({ format: "agulater/remove-result/v1", removed: [extensionJson(result)] }));
+      else console.log(`removed ${result.type} ${result.name} from ${root}`);
       return;
     }
     case "prepare": {
@@ -200,9 +215,10 @@ export async function run(args: string[]): Promise<void> {
         console.log(helpFor([command, ...rest]));
         return;
       }
-      const parsed = parse(rest, ["channel", "prefix", "repository", "url", "home"], ["json"]);
-      expectPositionals(parsed, 1, 1, "runtime install|update|status");
+      const parsed = parse(rest, ["channel", "prefix", "repository", "url", "home"], ["json", "modify-path", "no-modify-path", "keep-path"]);
+      expectPositionals(parsed, 1, 1, "runtime install|update|status|uninstall");
       if (parsed.values.has("repository") && parsed.values.has("url")) throw new Error("use either --repository or --url");
+      if (parsed.flags.has("modify-path") && parsed.flags.has("no-modify-path")) throw new Error("use either --modify-path or --no-modify-path");
       const channel = parseChannel(parsed.values.get("channel"));
       const options = {
         ...(channel ? { channel } : {}),
@@ -210,10 +226,30 @@ export async function run(args: string[]): Promise<void> {
         ...(parsed.values.get("repository") ? { repository: parsed.values.get("repository") } : {}),
         ...(parsed.values.get("url") ? { url: parsed.values.get("url") } : {}),
         ...(parsed.values.get("home") ? { home: parsed.values.get("home") } : {}),
+        ...(parsed.flags.has("modify-path") ? { modifyPath: true } : {}),
+        ...(parsed.flags.has("no-modify-path") ? { modifyPath: false } : {}),
       };
       const action = parsed.positionals[0];
       if (action === "status" && (channel || parsed.values.has("repository") || parsed.values.has("url"))) {
         throw new Error("runtime status accepts only --prefix, --home, and --json");
+      }
+      if ((action === "status" || action === "uninstall") && (parsed.flags.has("modify-path") || parsed.flags.has("no-modify-path"))) {
+        throw new Error(`runtime ${action} does not accept PATH modification flags`);
+      }
+      if (action !== "uninstall" && parsed.flags.has("keep-path")) throw new Error("--keep-path is only valid with runtime uninstall");
+      if (action === "uninstall") {
+        if (channel || parsed.values.has("repository") || parsed.values.has("url")) {
+          throw new Error("runtime uninstall accepts only --prefix, --home, --keep-path, and --json");
+        }
+        const result = await uninstallRuntime({
+          ...(parsed.values.get("prefix") ? { prefix: parsed.values.get("prefix") } : {}),
+          ...(parsed.values.get("home") ? { home: parsed.values.get("home") } : {}),
+          keepPath: parsed.flags.has("keep-path"),
+        });
+        if (parsed.flags.has("json")) console.log(JSON.stringify(result));
+        else if (result.removed) console.log(`Removed Agul ${result.version} from ${result.prefix}${result.pathRemoved ? " and updated PATH" : ""}`);
+        else console.log(`Agul is not managed at ${result.prefix}`);
+        return;
       }
       const result = action === "install"
         ? await installRuntime(options)
@@ -222,14 +258,15 @@ export async function run(args: string[]): Promise<void> {
           : action === "status"
             ? runtimeStatus(options)
             : undefined;
-      if (!result) throw new Error("usage: agulater runtime install|update|status");
+      if (!result) throw new Error("usage: agulater runtime install|update|status|uninstall");
       if (parsed.flags.has("json")) console.log(JSON.stringify(result));
       else if (!result.installed) console.log(result.reason ? `Agul at ${result.prefix} is unavailable: ${result.reason}` : `Agul is not managed at ${result.prefix}`);
       else {
         console.log(`Agul ${result.version} (${result.channel})`);
         console.log(`Launcher: ${result.shim}`);
         console.log(`Run now: ${runtimeLauncherCommand(result.shim)}`);
-        for (const hint of runtimePathHints(result.shim)) console.log(hint);
+        if (result.pathReady) console.log("PATH: ready; open a new terminal, then run: agul");
+        else for (const hint of runtimePathHints(result.shim)) console.log(hint);
       }
       return;
     }

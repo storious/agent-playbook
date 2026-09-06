@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Made the normal Agul runtime install persist its launcher directory in the
+  user PATH, while custom prefixes remain explicit and all changes are tracked
+  for clean removal.
+- Added `runtime uninstall` for managed Agul versions and launchers, plus
+  `remove --all --type plugin` for Agulater-installed plugins without removing
+  manually declared resources or the surrounding `.agents` package.
+- Made the Unix standalone installer update the active shell profile by default,
+  matching the existing Windows user-PATH behavior; both platforms can opt out.
 - Reworked CLI help into a concise first-run guide, command groups, and focused
   pages for every command with arguments, options, defaults, and examples.
 - Kept help rendering in one typed module and added source, standalone, width,

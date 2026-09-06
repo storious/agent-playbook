@@ -25,12 +25,13 @@ the normal installation route. The Agulater release selected here is
 independent from the Agul runtime channel selected below. Standalone archives
 retain both `LICENSE` and `THIRD_PARTY_NOTICES`.
 
-## Install, inspect, and update
+## Install, inspect, update, and uninstall
 
 ```console
 agulater runtime install --channel next
 agulater runtime status
 agulater runtime update
+agulater runtime uninstall
 ```
 
 `stable` selects the latest non-prerelease release. `next` selects the latest
@@ -61,14 +62,27 @@ only after the downloaded binary reports the expected version.
 The running Windows executable is never overwritten; the next invocation
 follows the updated launcher.
 
-The install command prints the launcher path. When its directory is not on
-`PATH`, Agulater also prints the exact directory to add. Open a new terminal
-after changing the user `PATH`. Until then, `runtime status --json` exposes the
-launcher as `shim`, so it can be run directly.
+The normal install persists the launcher directory in the user `PATH` and
+updates the current Agulater process. Open a new terminal before invoking
+`agul` by name from the shell. A custom `--prefix` does not change PATH unless
+`--modify-path` is supplied; `--no-modify-path` disables the normal behavior.
+Until a new shell is open, `runtime status --json` exposes the launcher as
+`shim`, so it can be run directly.
 
 `agulater runtime status` prints both the launcher path and the exact command
 to run it immediately. After opening a new terminal, `agul --version` should
 work directly.
+
+`agulater runtime uninstall` removes all Agul versions managed at the selected
+prefix and its launcher. It removes a PATH entry only when Agulater originally
+added it; `--keep-path` retains that entry. It does not remove Agulater,
+extensions, or user-authored `.agents` files.
+
+Implementation note: `env-paths` and `shell-env` were considered for this
+integration. They resolve conventional directories or read a shell environment,
+but do not persist and reverse a user PATH entry. The small native implementation
+therefore uses the Windows user environment API and marked shell-profile blocks
+without adding a runtime dependency.
 
 ## Release sources
 
