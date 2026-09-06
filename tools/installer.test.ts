@@ -24,5 +24,6 @@ describe("standalone installer contract", () => {
           : "linux-x64.tar.gz";
     expect(result.stdout).toContain(`agulater-v${agulaterVersion}-${platform}`);
     expect(result.stdout).toContain("agulater setup user --if-missing");
+    expect(result.stdout).toContain("PATH: add");
   });
 });

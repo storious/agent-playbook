@@ -40,6 +40,9 @@ if ($DryRun) {
         Write-Output $Url
     }
     Write-Output "Setup: agulater setup user --if-missing"
+    if (-not $NoModifyPath) {
+        Write-Output "PATH: add $InstallDir to the user PATH when needed"
+    }
     return
 }
 

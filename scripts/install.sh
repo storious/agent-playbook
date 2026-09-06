@@ -6,15 +6,17 @@ version="${AGULATER_VERSION:-{{VERSION}}}"
 install_dir="${AGULATER_INSTALL_DIR:-${HOME:-}/.local/bin}"
 setup_home="${AGULATER_HOME:-}"
 dry_run=false
+modify_path=true
 
 while [ "$#" -gt 0 ]; do
     case "$1" in
         --version) version="$2"; shift 2 ;;
         --install-dir) install_dir="$2"; shift 2 ;;
         --home) setup_home="$2"; shift 2 ;;
+        --no-modify-path) modify_path=false; shift ;;
         --dry-run) dry_run=true; shift ;;
         -h|--help)
-            echo "Usage: install.sh [--version VERSION] [--install-dir DIRECTORY] [--home DIRECTORY] [--dry-run]"
+            echo "Usage: install.sh [--version VERSION] [--install-dir DIRECTORY] [--home DIRECTORY] [--no-modify-path] [--dry-run]"
             exit 0
             ;;
         *) echo "unknown argument: $1" >&2; exit 2 ;;
@@ -32,6 +34,10 @@ version=${version#v}
     echo "HOME is unavailable; pass --install-dir" >&2
     exit 2
 }
+case "$install_dir" in
+    *"'"*|*"
+"*) echo "install directory contains unsupported characters" >&2; exit 2 ;;
+esac
 
 case "$(uname -s)/$(uname -m)" in
     Linux/x86_64|Linux/amd64) platform=linux-x64 ;;
@@ -56,6 +62,7 @@ if [ "$dry_run" = true ]; then
         echo "$url"
     fi
     echo "Setup: agulater setup user --if-missing"
+    [ "$modify_path" = false ] || echo "PATH: add ${install_dir} to the shell profile when needed"
     exit 0
 fi
 
@@ -86,5 +93,20 @@ fi
 echo "Installed ${destination}"
 case ":${PATH:-}:" in
     *:"$install_dir":*) ;;
-    *) echo "Add ${install_dir} to PATH to run agulater from a new shell." ;;
+    *)
+        if [ "$modify_path" = false ]; then
+            echo "Add ${install_dir} to PATH to run agulater from a new shell."
+        else
+            case "${SHELL:-}" in
+                */zsh) profile="${HOME}/.zshrc" ;;
+                */bash) profile="${HOME}/.bashrc" ;;
+                *) profile="${HOME}/.profile" ;;
+            esac
+            marker="# Added by the Agulater installer"
+            if [ ! -f "$profile" ] || ! grep -F "$marker" "$profile" >/dev/null 2>&1; then
+                printf '\nexport PATH='"'"'%s'"'"':"$PATH" %s\n' "$install_dir" "$marker" >> "$profile"
+            fi
+            echo "Added ${install_dir} to PATH in ${profile}; open a new terminal."
+        fi
+        ;;
 esac

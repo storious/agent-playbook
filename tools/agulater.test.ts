@@ -38,6 +38,7 @@ import {
   runtimeStatus,
   updateRuntime,
 } from "./lib/runtime-manager.ts";
+import { ensureUserPath, removeUserPath } from "./lib/path-environment.ts";
 
 const temporaryRoots: string[] = [];
 
@@ -357,6 +358,69 @@ describe("Agulater v2 product flow", () => {
     removeExtension(agentsRoot, "review");
     expect(existsSync(join(agentsRoot, "resources", "skills", "review"))).toBe(false);
     expect(readPackage(agentsRoot).resources?.skills).toEqual([]);
+  });
+
+  test("removes all Agulater-managed plugins without touching manual resources", () => {
+    const workspace = temporaryDirectory();
+    const agentsRoot = createProject(workspace, "helper");
+    const first = join(temporaryDirectory(), "weather");
+    const second = join(temporaryDirectory(), "search");
+    mkdirSync(first, { recursive: true });
+    mkdirSync(second, { recursive: true });
+    writeJson(join(first, "plugin.json"), { format: "agul/plugin/v2", name: "weather", version: "1.0.0" });
+    writeJson(join(second, "plugin.json"), { format: "agul/plugin/v2", name: "search", version: "1.0.0" });
+    addExtension(agentsRoot, first, "plugin");
+    addExtension(agentsRoot, second, "plugin");
+    const manifest = readPackage(agentsRoot);
+    manifest.resources ??= {};
+    manifest.resources.plugins = [
+      ...(manifest.resources.plugins ?? []),
+      { id: "manual", path: "manual-plugin" },
+    ];
+    mkdirSync(join(agentsRoot, "manual-plugin"), { recursive: true });
+    writeJson(join(agentsRoot, "manual-plugin", "plugin.json"), { format: "agul/plugin/v2", name: "manual", version: "1.0.0" });
+    writeJson(join(agentsRoot, "package.json"), manifest);
+
+    const removed = cli("remove", "--all", "--type", "plugin", "--path", workspace, "--json");
+    expect({ exitCode: removed.exitCode, stderr: removed.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
+    expect(JSON.parse(removed.stdout.toString()).removed.map((item: { id: string }) => item.id).sort()).toEqual(["search", "weather"]);
+    expect(readPackage(agentsRoot).resources?.plugins).toEqual([{ id: "manual", path: "manual-plugin" }]);
+    expect(existsSync(join(agentsRoot, "manual-plugin", "plugin.json"))).toBe(true);
+  });
+
+  test("adds and removes a tracked Unix PATH profile entry", () => {
+    const home = temporaryDirectory();
+    const directory = join(home, ".local", "bin");
+    const originalPath = process.env.PATH;
+    try {
+      process.env.PATH = "";
+      const registration = ensureUserPath(directory, { home, platform: "linux", shell: "/bin/bash" });
+      expect(registration).toMatchObject({ target: "profile", managed: true, profile: join(home, ".bashrc") });
+      expect(readFileSync(join(home, ".bashrc"), "utf8")).toContain(`export PATH='${directory}'`);
+      expect(ensureUserPath(directory, { home, platform: "linux", shell: "/bin/bash" }).managed).toBe(false);
+      expect(removeUserPath(registration, { platform: "linux" })).toBe(true);
+      expect(readFileSync(join(home, ".bashrc"), "utf8")).not.toContain("agulater PATH");
+    } finally {
+      process.env.PATH = originalPath;
+    }
+  });
+
+  test("tracks whether Windows user PATH was changed", () => {
+    const originalPath = process.env.PATH;
+    const directory = join(temporaryDirectory(), "bin");
+    const outputs = ["changed\r\n", "unchanged\r\n"];
+    const spawn = () => ({
+      exitCode: 0,
+      stdout: { toString: () => outputs.shift()! },
+      stderr: { toString: () => "" },
+    });
+    try {
+      process.env.PATH = "";
+      expect(ensureUserPath(directory, { platform: "win32", spawn }).managed).toBe(true);
+      expect(ensureUserPath(directory, { platform: "win32", spawn }).managed).toBe(false);
+    } finally {
+      process.env.PATH = originalPath;
+    }
   });
 
   test("rolls back a local extension when prepare fails", () => {
@@ -1038,6 +1102,34 @@ describe("Agulater v2 product flow", () => {
     expect(readFileSync(recordPath)).toEqual(previousRecord);
   });
 
+  test("uninstalls only an Agul runtime managed at the selected prefix", async () => {
+    const fixture = temporaryDirectory();
+    const prefix = join(temporaryDirectory(), "agul-install");
+    const index = join(fixture, "releases.json");
+    const executable = fakeAgul(fixture, "1.0.0");
+    writeRuntimeIndex(index, [{ version: "1.0.0", executable: basename(executable) }]);
+    const installed = await installRuntime({ url: index, prefix });
+    expect(existsSync(installed.shim)).toBe(true);
+    writeFileSync(installed.shim, "broken launcher\n", "utf8");
+
+    const removed = cli("runtime", "uninstall", "--prefix", prefix, "--json");
+    expect({ exitCode: removed.exitCode, stderr: removed.stderr.toString() }).toEqual({ exitCode: 0, stderr: "" });
+    expect(JSON.parse(removed.stdout.toString())).toMatchObject({
+      format: "agulater/runtime-uninstall/v1",
+      prefix,
+      removed: true,
+      version: "1.0.0",
+      pathRemoved: false,
+    });
+    expect(existsSync(prefix)).toBe(false);
+    expect(JSON.parse(cli("runtime", "uninstall", "--prefix", prefix, "--json").stdout.toString())).toEqual({
+      format: "agulater/runtime-uninstall/v1",
+      prefix,
+      removed: false,
+      pathRemoved: false,
+    });
+  });
+
   test("removes a first-install launcher when activation state cannot commit", () => {
     const fixture = temporaryDirectory();
     const prefix = join(temporaryDirectory(), "agul-install");
@@ -1255,8 +1347,8 @@ describe("Agulater v2 product flow", () => {
     expect(help.stdout.toString()).toContain("Run agulater <command> --help");
     expect(cli("catalog", "--help").stdout.toString()).toContain("Discover extensions through registered Catalogs.");
     expect(cli("catalog").stdout.toString()).toContain("Search extension ids, names, and descriptions.");
-    expect(cli("runtime", "--help").stdout.toString()).toContain("Install and update standalone Agul runtimes.");
-    expect(cli("runtime").stdout.toString()).toContain("status   Show the active version, channel, and launcher.");
+    expect(cli("runtime", "--help").stdout.toString()).toContain("Manage standalone Agul runtimes.");
+    expect(cli("runtime").stdout.toString()).toContain("Show the active version, channel, and launcher.");
     for (const [command, expected] of [
       [["runtime", "install", "--help"], "default: stable on first install"],
       [["catalog", "add", "--help"], "<url-or-path>"],

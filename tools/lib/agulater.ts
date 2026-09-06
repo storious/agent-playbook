@@ -1139,6 +1139,12 @@ export function removeExtension(agentsRoot: string, name: string, requestedType?
   return { name: id, type: match.type, path: match.path, version: match.version };
 }
 
+export function removeManagedExtensions(agentsRoot: string, type: ExtensionType): ExtensionResult[] {
+  const root = resolve(agentsRoot);
+  const managed = readSourceRecords(root).filter((record) => record.type === type);
+  return managed.map((record) => removeExtension(root, record.id, type));
+}
+
 function parsePackage(value: unknown, label: string): AgentPackage {
   if (isRecord(value) && value.format !== packageFormat) {
     throw new Error(`${label} format must be ${packageFormat}; legacy packages are not accepted`);
